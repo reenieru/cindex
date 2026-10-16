@@ -51,14 +51,8 @@
       transparent 35%,
       rgba(255, 255, 255, 0.04) 100%
     ) padding-box,
-    rgba(10, 10, 10, 0.45) padding-box,
-    linear-gradient(
-      90deg,
-      transparent 21%,
-      #ffffff 50%,
-      transparent 82%
-    ) border-box;
-  border: 2px solid transparent;
+    rgba(10, 10, 10, 0.45) padding-box;
+  border: 2px solid rgba(255, 255, 255, 0.45);
   border-radius: 40px;
   backdrop-filter: blur(16px) saturate(125%);
   -webkit-backdrop-filter: blur(16px) saturate(125%);
