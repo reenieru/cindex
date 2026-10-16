@@ -1,0 +1,57 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /movies/{movieId} {
+      function isValidMovie(movie) {
+        return movie.keys().hasAll([
+            'title',
+            'description',
+            'release_date',
+            'genre',
+            'poster_url',
+            'backdrop_url',
+            'trailer_url',
+            'mtrcb_rating',
+            'hasOscar',
+            'cast',
+            'director'
+          ])
+          && movie.keys().hasOnly([
+            'title',
+            'description',
+            'release_date',
+            'runtime',
+            'genre',
+            'poster_url',
+            'backdrop_url',
+            'trailer_url',
+            'average_rating',
+            'mtrcb_rating',
+            'hasOscar',
+            'cast',
+            'director'
+          ])
+          && movie.title is string
+          && movie.description is string
+          && movie.release_date is string
+          && movie.genre is list
+          && movie.poster_url is string
+          && movie.backdrop_url is string
+          && movie.trailer_url is string
+          && movie.mtrcb_rating is string
+          && movie.hasOscar is bool
+          && movie.cast is list
+          && movie.director is string
+          && (!('runtime' in movie) || movie.runtime is number)
+          && (!('average_rating' in movie)
+            || movie.average_rating is number);
+      }
+
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null
+        && isValidMovie(request.resource.data);
+      allow delete: if request.auth != null;
+    }
+  }
+}
