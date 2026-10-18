@@ -123,7 +123,7 @@
 }
 
 .movie-info-nav-control:hover .movie-info-nav-preview,
-.movie-info-nav-control:focus-within .movie-info-nav-preview {
+.movie-info-nav-button:focus-visible + .movie-info-nav-preview {
   opacity: 1;
   transform: translate(-50%, 0);
 }
