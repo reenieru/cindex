@@ -7,6 +7,7 @@ import MovieForm from "./MovieForm";
 import MovieCard from "./MovieCard";
 import MovieInfoModal from "./MovieInfoModal";
 import {
+  formatRuntime,
   getMovieGenres,
   getMtrcbRatingClass,
   getReleaseYear,
@@ -20,23 +21,49 @@ function Home() {
   const [movies, setMovies] = useState([]);
   const [featuredMovieId, setFeaturedMovieId] = useState(null);
   const [revealedTrailerMovieId, setRevealedTrailerMovieId] = useState(null);
-  const [savedMovieIds, setSavedMovieIds] = useState([]);
-  const [showSavedMovies, setShowSavedMovies] = useState(false);
   const [showMovieInfo, setShowMovieInfo] = useState(false);
   const [movieInfoSelection, setMovieInfoSelection] = useState(null);
   const [showAddMovie, setShowAddMovie] = useState(false);
   const [editingMovie, setEditingMovie] = useState(null);
   const [movieFormKey, setMovieFormKey] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasMinimumLoadingTime, setHasMinimumLoadingTime] = useState(false);
   const [loadError, setLoadError] = useState(null);
   const [logoutError, setLogoutError] = useState("");
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setHasMinimumLoadingTime(true);
+    }, 2000);
+
+    return () => window.clearTimeout(timer);
+  }, []);
+
   const fetchMovies = useCallback(async () => {
     const snapshot = await getDocs(collection(db, "movies"));
-    return snapshot.docs.map((movieDocument) => ({
-      id: movieDocument.id,
-      ...movieDocument.data(),
-    }));
+    return snapshot.docs.map((movieDocument) => {
+      const movieData = movieDocument.data();
+      return {
+        id: movieDocument.id,
+        title: movieData.title,
+        description: movieData.description,
+        release_date: movieData.release_date,
+        genre: movieData.genre,
+        poster_url: movieData.poster_url,
+        backdrop_url: movieData.backdrop_url,
+        trailer_url: movieData.trailer_url,
+        mtrcb_rating: movieData.mtrcb_rating,
+        hasOscar: movieData.hasOscar,
+        cast: movieData.cast,
+        director: movieData.director,
+        ...(movieData.runtime !== undefined && {
+          runtime: movieData.runtime,
+        }),
+        ...(movieData.average_rating !== undefined && {
+          average_rating: movieData.average_rating,
+        }),
+      };
+    });
   }, []);
 
   useEffect(() => {
@@ -94,7 +121,7 @@ function Home() {
 
     const timer = window.setTimeout(
       () => setRevealedTrailerMovieId(featuredMovieId),
-      6500,
+      1500,
     );
     return () => window.clearTimeout(timer);
   }, [featuredMovieId]);
@@ -109,35 +136,40 @@ function Home() {
     }
   };
 
-  const featuredMovie =
-    movies.find((movie) => movie.id === featuredMovieId) ?? movies[0] ?? null;
+  const featuredMovie = movies.find((movie) => movie.id === featuredMovieId) ?? movies[0] ?? null;
   const trailerSource = getTrailerSource(featuredMovie?.trailer_url, true);
   const showTrailer = revealedTrailerMovieId === featuredMovie?.id;
   const genres = getMovieGenres(featuredMovie);
   const heroImage = featuredMovie?.backdrop_url || featuredMovie?.poster_url;
-  const catalogueMovies = movies.filter((movie) => {
-    const isSaved = savedMovieIds.includes(movie.id);
-    return !showSavedMovies || isSaved;
-  });
   const awardWinningMovies = movies.filter(
     (movie) => movie.hasOscar === true,
   );
 
-  const handleFeatureMovie = (movieId) => {
+  const handleFeatureMovie = useCallback((movieId) => {
     if (movieId !== featuredMovieId) {
       setRevealedTrailerMovieId(null);
       setShowMovieInfo(false);
       setFeaturedMovieId(movieId);
     }
-  };
+  }, [featuredMovieId]);
 
-  const handleToggleSaved = (movieId) => {
-    setSavedMovieIds((savedIds) =>
-      savedIds.includes(movieId)
-        ? savedIds.filter((id) => id !== movieId)
-        : [...savedIds, movieId],
-    );
-  };
+  useEffect(() => {
+    if (movies.length < 2) {
+      return undefined;
+    }
+
+    const timer = window.setInterval(() => {
+      const currentIndex = movies.findIndex(
+        (movie) => movie.id === featuredMovieId,
+      );
+      const nextMovie = movies[(currentIndex + 1) % movies.length];
+      if (nextMovie) {
+        handleFeatureMovie(nextMovie.id);
+      }
+    }, 18000);
+
+    return () => window.clearInterval(timer);
+  }, [movies, featuredMovieId, handleFeatureMovie]);
 
   const handleCloseMovieInfo = useCallback(() => {
     setMovieInfoSelection(null);
@@ -162,9 +194,6 @@ function Home() {
       (currentMovie) => currentMovie.id !== movie.id,
     );
     setMovies(remainingMovies);
-    setSavedMovieIds((savedIds) =>
-      savedIds.filter((savedId) => savedId !== movie.id),
-    );
     setFeaturedMovieId((currentId) =>
       currentId === movie.id ? remainingMovies[0]?.id ?? null : currentId,
     );
@@ -176,9 +205,22 @@ function Home() {
 
   return (
     <main className="homepage">
-      {isLoading ? (
-        <section className="home-status">
-          <p>Loading movies...</p>
+      {isLoading || !hasMinimumLoadingTime ? (
+        <section className="home-loading-screen" aria-label="Loading Cindex">
+          <img
+            className="home-loading-logo"
+            src={logoImg}
+            alt="Cindex"
+            draggable={false}
+          />
+          <div
+            className="home-loading-track"
+            role="progressbar"
+            aria-label="Loading movies"
+            aria-valuetext="Loading"
+          >
+            <span className="home-loading-line" />
+          </div>
         </section>
       ) : loadError ? (
         <section className="home-status" role="alert">
@@ -216,20 +258,9 @@ function Home() {
                   </svg>
                   Home
                 </a>
-                <a
-                  className="home-nav-link"
-                  href="#movies"
-                  onClick={() => setShowSavedMovies(false)}
-                >
+                <a className="home-nav-link" href="#movies">
                   Movies
                 </a>
-                <button
-                  className={`home-nav-link${showSavedMovies ? " home-nav-link-active" : ""}`}
-                  type="button"
-                  onClick={() => setShowSavedMovies(!showSavedMovies)}
-                >
-                  My List
-                </button>
                 <button
                   className="home-nav-link home-add-movie"
                   type="button"
@@ -256,7 +287,6 @@ function Home() {
             onMovieAdded={(movie) => {
               setMovies((currentMovies) => [...currentMovies, movie]);
               handleFeatureMovie(movie.id);
-              setShowSavedMovies(false);
             }}
             onMovieUpdated={(updatedMovie) => {
               setMovies((currentMovies) =>
@@ -302,8 +332,10 @@ function Home() {
                     key={featuredMovie.id}
                     src={trailerSource.src}
                     title={`${featuredMovie.title || "Featured movie"} trailer`}
-                    allow="autoplay; encrypted-media; picture-in-picture"
+                    allow="autoplay; encrypted-media"
                     referrerPolicy="strict-origin-when-cross-origin"
+                    loading="eager"
+                    style={{ pointerEvents: "none" }}
                     tabIndex={-1}
                   />
                 )}
@@ -316,6 +348,11 @@ function Home() {
                     muted
                     loop
                     playsInline
+                    controls={false}
+                    disablePictureInPicture
+                    disableRemotePlayback
+                    controlsList="nodownload noplaybackrate noremoteplayback"
+                    style={{ pointerEvents: "none" }}
                     tabIndex={-1}
                   />
                 )}
@@ -323,6 +360,7 @@ function Home() {
 
             {heroImage && (
               <img
+                key={featuredMovie.id}
                 className={`hero-poster${showTrailer && trailerSource ? " hero-poster-fade" : ""}`}
                 src={heroImage}
                 alt=""
@@ -346,7 +384,7 @@ function Home() {
               </div>
             )}
 
-            <div className="hero-content">
+            <div className="hero-content" key={featuredMovie.id}>
               <h1 id="featured-title" className="hero-title">
                 {featuredMovie.title || "Untitled movie"}
               </h1>
@@ -390,7 +428,7 @@ function Home() {
               {showMovieInfo && (
                 <div className="hero-extra-info">
                   {featuredMovie.runtime != null && (
-                    <span>{featuredMovie.runtime} min</span>
+                    <span>{formatRuntime(featuredMovie.runtime)}</span>
                   )}
                   {featuredMovie.director && (
                     <span>Directed by {featuredMovie.director}</span>
@@ -416,17 +454,6 @@ function Home() {
                 >
                   {showMovieInfo ? "Hide Information" : "View Information"}
                 </button>
-                <div className="hero-utility-actions">
-                  <button
-                    className={`hero-utility-button${savedMovieIds.includes(featuredMovie.id) ? " hero-utility-active" : ""}`}
-                    type="button"
-                    onClick={() => handleToggleSaved(featuredMovie.id)}
-                    aria-label={savedMovieIds.includes(featuredMovie.id) ? "Remove from My List" : "Add to My List"}
-                    aria-pressed={savedMovieIds.includes(featuredMovie.id)}
-                  >
-                    {savedMovieIds.includes(featuredMovie.id) ? "✓" : "+"}
-                  </button>
-                </div>
               </div>
             </div>
           </section>
@@ -436,27 +463,21 @@ function Home() {
             id="movies"
             aria-labelledby="catalogue-title"
           >
-            <h2 id="catalogue-title">{showSavedMovies ? "My List" : "Movies"}</h2>
-            {catalogueMovies.length > 0 ? (
+            <h2 id="catalogue-title">Movies</h2>
+            {movies.length > 0 ? (
               <div className="movie-list">
-                {catalogueMovies.map((movie) => (
+                {movies.map((movie) => (
                   <MovieCard
                     key={movie.id}
                     movie={movie}
                     isFeatured={movie.id === featuredMovie.id}
                     onFeature={handleFeatureMovie}
                     onShowInfo={setMovieInfoSelection}
-                    isSaved={savedMovieIds.includes(movie.id)}
-                    onToggleSaved={handleToggleSaved}
                   />
                 ))}
               </div>
             ) : (
-              <p>
-                {showSavedMovies
-                  ? "No saved movies yet. Use the + button on a movie to add it."
-                  : "No movies found."}
-              </p>
+              <p>No movies found.</p>
             )}
           </section>
 
@@ -474,8 +495,6 @@ function Home() {
                     isFeatured={movie.id === featuredMovie.id}
                     onFeature={handleFeatureMovie}
                     onShowInfo={setMovieInfoSelection}
-                    isSaved={savedMovieIds.includes(movie.id)}
-                    onToggleSaved={handleToggleSaved}
                   />
                 ))}
               </div>

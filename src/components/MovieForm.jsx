@@ -147,6 +147,112 @@ function MovieForm({
     }));
   };
 
+  const handleCreateMovie = async (movieData) => {
+    try {
+      const movieCollection = collection(db, "movies");
+
+      const movieDocument = await addDoc(movieCollection, {
+        title: movieData.title,
+        description: movieData.description,
+        release_date: movieData.release_date,
+        genre: movieData.genre,
+        poster_url: movieData.poster_url,
+        backdrop_url: movieData.backdrop_url,
+        trailer_url: movieData.trailer_url,
+        mtrcb_rating: movieData.mtrcb_rating,
+        hasOscar: movieData.hasOscar,
+        cast: movieData.cast,
+        director: movieData.director,
+        ...(movieData.runtime !== undefined && {
+          runtime: movieData.runtime,
+        }),
+        ...(movieData.average_rating !== undefined && {
+          average_rating: movieData.average_rating,
+        }),
+      });
+
+      onMovieAdded({
+        id: movieDocument.id,
+        title: movieData.title,
+        description: movieData.description,
+        release_date: movieData.release_date,
+        genre: movieData.genre,
+        poster_url: movieData.poster_url,
+        backdrop_url: movieData.backdrop_url,
+        trailer_url: movieData.trailer_url,
+        mtrcb_rating: movieData.mtrcb_rating,
+        hasOscar: movieData.hasOscar,
+        cast: movieData.cast,
+        director: movieData.director,
+        ...(movieData.runtime !== undefined && {
+          runtime: movieData.runtime,
+        }),
+        ...(movieData.average_rating !== undefined && {
+          average_rating: movieData.average_rating,
+        }),
+      });
+      setIsClosing(true);
+    } catch (error) {
+      console.error("Failed to add movie in Firestore.", error);
+      setFormError(
+        `Could not add movie: ${error.message || "Unknown Firestore error"}`,
+      );
+    }
+  };
+
+  const handleUpdateMovie = async (movieId, movieData) => {
+    try {
+      await setDoc(doc(db, "movies", movieId), {
+        title: movieData.title,
+        description: movieData.description,
+        release_date: movieData.release_date,
+        genre: movieData.genre,
+        poster_url: movieData.poster_url,
+        backdrop_url: movieData.backdrop_url,
+        trailer_url: movieData.trailer_url,
+        mtrcb_rating: movieData.mtrcb_rating,
+        hasOscar: movieData.hasOscar,
+        cast: movieData.cast,
+        director: movieData.director,
+        ...(movieData.runtime !== undefined && {
+          runtime: movieData.runtime,
+        }),
+        ...(movieData.average_rating !== undefined && {
+          average_rating: movieData.average_rating,
+        }),
+      });
+
+      onMovieUpdated({
+        id: movieId,
+        title: movieData.title,
+        description: movieData.description,
+        release_date: movieData.release_date,
+        genre: movieData.genre,
+        poster_url: movieData.poster_url,
+        backdrop_url: movieData.backdrop_url,
+        trailer_url: movieData.trailer_url,
+        mtrcb_rating: movieData.mtrcb_rating,
+        hasOscar: movieData.hasOscar,
+        cast: movieData.cast,
+        director: movieData.director,
+        ...(movieData.runtime !== undefined && {
+          runtime: movieData.runtime,
+        }),
+        ...(movieData.average_rating !== undefined && {
+          average_rating: movieData.average_rating,
+        }),
+      });
+      setIsClosing(true);
+    } catch (error) {
+      console.error("Failed to update movie in Firestore.", error);
+      setFormError(
+        error.code === "permission-denied"
+          ? "You do not have permission to update movies. Update the movies collection rules in Firebase."
+          : `Could not update movie: ${error.message || "Unknown Firestore error"}`,
+      );
+    }
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     setFormError("");
@@ -161,26 +267,10 @@ function MovieForm({
     setIsSaving(true);
     try {
       if (movie) {
-        await setDoc(doc(db, "movies", movie.id), movieData);
-        onMovieUpdated({ id: movie.id, ...movieData });
+        await handleUpdateMovie(movie.id, movieData);
       } else {
-        const movieReference = await addDoc(
-          collection(db, "movies"),
-          movieData,
-        );
-        onMovieAdded({ id: movieReference.id, ...movieData });
+        await handleCreateMovie(movieData);
       }
-      setIsClosing(true);
-    } catch (error) {
-      console.error(
-        `Failed to ${movie ? "update" : "add"} movie in Firestore.`,
-        error,
-      );
-      setFormError(
-        error.code === "permission-denied"
-          ? `You do not have permission to ${movie ? "update" : "add"} movies. Update the movies collection rules in Firebase.`
-          : `Could not ${movie ? "update" : "add"} movie: ${error.message || "Unknown Firestore error"}`,
-      );
     } finally {
       setIsSaving(false);
     }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import {
+  formatRuntime,
   getMovieGenres,
   getMtrcbRatingClass,
   getReleaseYear,
@@ -119,6 +120,7 @@ function MovieInfoModal({ movie, onClose, onEdit, onDelete }) {
     "runtime",
     "mtrcb_rating",
     "average_rating",
+    "hasOscar",
     "director",
     "description",
     "poster_url",
@@ -126,8 +128,7 @@ function MovieInfoModal({ movie, onClose, onEdit, onDelete }) {
     "trailer_url",
   ]);
   const additionalFields = Object.entries(movie).filter(
-    ([field, value]) =>
-      !featuredFields.has(field) && !(field === "hasOscar" && value !== true),
+    ([field]) => !featuredFields.has(field),
   );
   const posterUrl = movie.poster_url || movie.backdrop_url;
   const genres = getMovieGenres(movie);
@@ -201,7 +202,7 @@ function MovieInfoModal({ movie, onClose, onEdit, onDelete }) {
               </span>
               <span>
                 {movie.runtime != null
-                  ? `${movie.runtime} min`
+                  ? formatRuntime(movie.runtime)
                   : "Runtime unavailable"}
               </span>
               <span
@@ -282,27 +283,28 @@ function MovieInfoModal({ movie, onClose, onEdit, onDelete }) {
               />
             </section>
           )}
+          <section className="movie-info-additional">
+            <h3>Awards</h3>
+            <dl className="movie-info-fields">
+              <div
+                className={`movie-info-field${movie.hasOscar === true ? " movie-info-field-oscar" : ""}`}
+              >
+                <dt>Oscar Winner</dt>
+                <dd>{movie.hasOscar === true ? "Yes" : "No"}</dd>
+              </div>
+            </dl>
+          </section>
           {additionalFields.length > 0 && (
             <section className="movie-info-additional">
               <h3>More Information</h3>
               <dl className="movie-info-fields">
                 {additionalFields.map(([field, value]) => (
-                  field === "hasOscar" ? (
-                    <div
-                      className="movie-info-field movie-info-field-oscar"
-                      key={field}
-                    >
-                      <dt>Oscar Winner</dt>
-                      <dd>Yes</dd>
-                    </div>
-                  ) : (
-                    <div className="movie-info-field" key={field}>
-                      <dt>{formatFieldName(field)}</dt>
-                      <dd>
-                        <MovieValue value={value} />
-                      </dd>
-                    </div>
-                  )
+                  <div className="movie-info-field" key={field}>
+                    <dt>{formatFieldName(field)}</dt>
+                    <dd>
+                      <MovieValue value={value} />
+                    </dd>
+                  </div>
                 ))}
               </dl>
             </section>

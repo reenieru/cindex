@@ -3,10 +3,8 @@ import { getReleaseYear } from "./movieUtils";
 function MovieCard({
   movie,
   isFeatured,
-  isSaved,
   onFeature,
   onShowInfo,
-  onToggleSaved,
 }) {
   return (
     <article
@@ -26,25 +24,14 @@ function MovieCard({
           )}
         </button>
         <div className="movie-choice-overlay">
-          <div className="movie-choice-actions">
-            <button
-              className="movie-choice-info"
-              type="button"
-              aria-label={`View information for ${movie.title || "Untitled movie"}`}
-              onClick={() => onShowInfo(movie)}
-            >
-              i
-            </button>
-            <button
-              className={`movie-choice-list${isSaved ? " movie-choice-list-saved" : ""}`}
-              type="button"
-              aria-label={`${isSaved ? "Remove" : "Add"} ${movie.title || "Untitled movie"} ${isSaved ? "from" : "to"} My List`}
-              aria-pressed={isSaved}
-              onClick={() => onToggleSaved(movie.id)}
-            >
-              {isSaved ? "✓" : "+"}
-            </button>
-          </div>
+          <button
+            className="movie-choice-info"
+            type="button"
+            aria-label={`View information for ${movie.title || "Untitled movie"}`}
+            onClick={() => onShowInfo(movie)}
+          >
+            i
+          </button>
           <div className="movie-choice-meta">
             <span>{getReleaseYear(movie.release_date) || "Year N/A"}</span>
             <span>

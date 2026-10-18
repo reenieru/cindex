@@ -1,8 +1,7 @@
 # Cindex
 
 Cindex is a movie catalogue built with React, Vite, and Firebase. Browse featured
-movies, explore the catalogue, save movies to My List, and view or manage movie
-information.
+movies, explore the catalogue, and view or manage movie information.
 
 ## Requirements
 

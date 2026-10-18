@@ -30,6 +30,22 @@ export const getMovieGenres = (movie) => {
   return [];
 };
 
+export const formatRuntime = (runtime) => {
+  const totalMinutes = Number(runtime);
+  if (!Number.isFinite(totalMinutes) || totalMinutes < 0) {
+    return null;
+  }
+
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  if (hours === 0) {
+    return `${minutes} min`;
+  }
+
+  return minutes === 0 ? `${hours} hr` : `${hours} hr ${minutes} min`;
+};
+
 export const getMtrcbRatingClass = (rating) => {
   const normalizedRating = String(rating || "").trim().toUpperCase();
 
