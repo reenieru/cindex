@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   formatRuntime,
   getMovieGenres,
@@ -72,10 +72,25 @@ function MovieValue({ value }) {
   return String(value);
 }
 
-function MovieInfoModal({ movie, onClose, onEdit, onDelete }) {
+function MovieInfoModal({
+  movie,
+  movies,
+  slideDirection,
+  onMovieChange,
+  onClose,
+  onEdit,
+  onDelete,
+}) {
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+  const dialogRef = useRef(null);
+
+  useEffect(() => {
+    if (dialogRef.current) {
+      dialogRef.current.scrollTop = 0;
+    }
+  }, [movie.id]);
 
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -133,6 +148,18 @@ function MovieInfoModal({ movie, onClose, onEdit, onDelete }) {
   const posterUrl = movie.poster_url || movie.backdrop_url;
   const genres = getMovieGenres(movie);
   const trailerSource = getTrailerSource(movie.trailer_url);
+  const currentMovieIndex = movies.findIndex(
+    (currentMovie) => currentMovie.id === movie.id,
+  );
+  const previousMovie =
+    movies[(currentMovieIndex - 1 + movies.length) % movies.length];
+  const nextMovie = movies[(currentMovieIndex + 1) % movies.length];
+
+  const handleMovieChange = (nextMovie, direction) => {
+    setIsDescriptionExpanded(false);
+    setDeleteError("");
+    onMovieChange(nextMovie, direction);
+  };
 
   return (
     <div
@@ -143,12 +170,15 @@ function MovieInfoModal({ movie, onClose, onEdit, onDelete }) {
         }
       }}
     >
-      <section
-        className="movie-info-dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="movie-info-title"
-      >
+      <div className="movie-info-layout">
+        <section
+          key={movie.id}
+          className={`movie-info-dialog movie-info-dialog-${slideDirection}`}
+          ref={dialogRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="movie-info-title"
+        >
         <div
           className="movie-info-poster"
           style={
@@ -249,7 +279,7 @@ function MovieInfoModal({ movie, onClose, onEdit, onDelete }) {
             )}
           </div>
         </div>
-        <div className="movie-info-content">
+        <div className="movie-info-content" key={movie.id}>
           {trailerSource && (
             <section className="movie-info-media-section">
               <h3>Trailer</h3>
@@ -332,7 +362,52 @@ function MovieInfoModal({ movie, onClose, onEdit, onDelete }) {
             </p>
           )}
         </div>
-      </section>
+        </section>
+        {movies.length > 1 && (
+          <>
+            <div className="movie-info-nav-control movie-info-nav-previous">
+              <button
+                className="movie-info-nav-button"
+                type="button"
+                aria-label={`Previous movie: ${previousMovie.title || "Untitled movie"}`}
+                disabled={isDeleting}
+                onClick={() => handleMovieChange(previousMovie, "previous")}
+              >
+                &lt;
+              </button>
+              <div className="movie-info-nav-preview" aria-hidden="true">
+                {(previousMovie.backdrop_url || previousMovie.poster_url) && (
+                  <img
+                    src={previousMovie.backdrop_url || previousMovie.poster_url}
+                    alt=""
+                  />
+                )}
+                <span>{previousMovie.title || "Untitled movie"}</span>
+              </div>
+            </div>
+            <div className="movie-info-nav-control movie-info-nav-next">
+              <button
+                className="movie-info-nav-button"
+                type="button"
+                aria-label={`Next movie: ${nextMovie.title || "Untitled movie"}`}
+                disabled={isDeleting}
+                onClick={() => handleMovieChange(nextMovie, "next")}
+              >
+                &gt;
+              </button>
+              <div className="movie-info-nav-preview" aria-hidden="true">
+                {(nextMovie.backdrop_url || nextMovie.poster_url) && (
+                  <img
+                    src={nextMovie.backdrop_url || nextMovie.poster_url}
+                    alt=""
+                  />
+                )}
+                <span>{nextMovie.title || "Untitled movie"}</span>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }

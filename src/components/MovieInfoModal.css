@@ -11,8 +11,13 @@
   animation: movie-info-fade-in 160ms ease-out both;
 }
 
+.movie-info-layout {
+  position: relative;
+  width: min(760px, calc(100vw - 96px));
+}
+
 .movie-info-dialog {
-  width: min(760px, 100%);
+  width: 100%;
   max-height: min(calc(100vh - 40px), 820px);
   padding: 0;
   overflow-y: auto;
@@ -21,7 +26,8 @@
   background: rgba(18, 16, 16, 0.96);
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.65);
   color: #ffffff;
-  animation: movie-info-rise-in 200ms ease-out both;
+  animation: movie-info-dialog-slide-in 280ms cubic-bezier(0.2, 0.75, 0.3, 1)
+    both;
   scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
   scrollbar-width: thin;
 }
@@ -51,6 +57,91 @@
   background-position: center 35%;
   background-repeat: no-repeat;
   background-size: cover;
+}
+
+.movie-info-nav-control {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+}
+
+.movie-info-nav-next {
+  left: calc(100% + 16px);
+}
+
+.movie-info-nav-previous {
+  right: calc(100% + 16px);
+}
+
+.movie-info-nav-button {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  border-radius: 50%;
+  background: rgba(8, 7, 7, 0.62);
+  color: #ffffff;
+  font: 400 30px/1 var(--font-body);
+  cursor: pointer;
+  transform: translateY(-50%);
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    transform 160ms ease;
+}
+
+.movie-info-nav-button:hover:not(:disabled) {
+  border-color: #ff5964;
+  background: rgba(255, 70, 85, 0.28);
+  transform: translateY(-50%) scale(1.08);
+}
+
+.movie-info-nav-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.movie-info-nav-preview {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 50%;
+  display: grid;
+  width: 150px;
+  gap: 6px;
+  padding: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  background: rgba(18, 16, 16, 0.96);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -4px);
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
+}
+
+.movie-info-nav-control:hover .movie-info-nav-preview,
+.movie-info-nav-control:focus-within .movie-info-nav-preview {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.movie-info-nav-preview img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 7px;
+  object-fit: cover;
+}
+
+.movie-info-nav-preview span {
+  overflow: hidden;
+  color: #ffffff;
+  font: 500 12px/1.35 var(--font-body);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .movie-info-poster-shade {
@@ -88,6 +179,23 @@
   z-index: 1;
   width: min(620px, 100%);
   margin-top: auto;
+}
+
+.movie-info-poster,
+.movie-info-content {
+  animation: movie-info-slide-in 260ms ease-out both;
+}
+
+@keyframes movie-info-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(14px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .movie-info-close {
@@ -421,18 +529,39 @@
   }
 }
 
-@keyframes movie-info-rise-in {
+@keyframes movie-info-dialog-slide-in {
   from {
     opacity: 0;
-    transform: translateY(10px) scale(0.98);
+    transform: translateX(36px);
   }
+
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateX(0);
+  }
+}
+
+.movie-info-dialog-previous {
+  animation-name: movie-info-dialog-slide-in-previous;
+}
+
+@keyframes movie-info-dialog-slide-in-previous {
+  from {
+    opacity: 0;
+    transform: translateX(-36px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
   }
 }
 
 @media (max-width: 520px) {
+  .movie-info-layout {
+    width: calc(100vw - 40px);
+  }
+
   .movie-info-dialog {
     max-height: calc(100dvh - 24px);
   }
@@ -474,15 +603,52 @@
     grid-template-columns: 1fr;
     gap: 6px;
   }
+
+  .movie-info-nav-control {
+    top: auto;
+    bottom: -54px;
+  }
+
+  .movie-info-nav-next {
+    left: calc(50% + 6px);
+  }
+
+  .movie-info-nav-previous {
+    right: calc(50% + 6px);
+  }
+
+  .movie-info-nav-button {
+    width: 40px;
+    height: 40px;
+  }
+
+  .movie-info-nav-preview {
+    top: auto;
+    bottom: calc(100% + 8px);
+  }
+
+  .movie-info-nav-preview img {
+    display: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .movie-info-backdrop,
-  .movie-info-dialog {
+  .movie-info-dialog,
+  .movie-info-poster,
+  .movie-info-content {
     animation: none;
   }
 
   .movie-info-close {
+    transition: none;
+  }
+
+  .movie-info-nav-button {
+    transition: none;
+  }
+
+  .movie-info-nav-preview {
     transition: none;
   }
 

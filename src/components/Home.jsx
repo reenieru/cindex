@@ -23,6 +23,7 @@ function Home() {
   const [revealedTrailerMovieId, setRevealedTrailerMovieId] = useState(null);
   const [showMovieInfo, setShowMovieInfo] = useState(false);
   const [movieInfoSelection, setMovieInfoSelection] = useState(null);
+  const [movieInfoDirection, setMovieInfoDirection] = useState("next");
   const [showAddMovie, setShowAddMovie] = useState(false);
   const [editingMovie, setEditingMovie] = useState(null);
   const [movieFormKey, setMovieFormKey] = useState(0);
@@ -301,6 +302,12 @@ function Home() {
           {movieInfoSelection && (
             <MovieInfoModal
               movie={movieInfoSelection}
+              movies={movies}
+              slideDirection={movieInfoDirection}
+              onMovieChange={(nextMovie, direction) => {
+                setMovieInfoDirection(direction);
+                setMovieInfoSelection(nextMovie);
+              }}
               onClose={handleCloseMovieInfo}
               onEdit={handleEditMovie}
               onDelete={handleDeleteMovie}
