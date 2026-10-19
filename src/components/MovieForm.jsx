@@ -12,7 +12,9 @@ import "./MovieForm.css";
 const moviesCollectionRef = collection(db, "movies");
 
 const emptyMovieForm = {
+  title: "",
   description: "",
+  releaseYear: "",
   runtime: "",
   genre: "",
   poster_url: "",
@@ -22,13 +24,16 @@ const emptyMovieForm = {
   mtrcb_rating: "",
   cast: "",
   director: "",
+  ReceivedOscar: false,
 };
 
 const mtrcbRatings = ["G", "PG", "PG-13", "R-13", "R-16", "R-18", "X"];
 
 const movieToForm = (movie) => ({
   ...emptyMovieForm,
+  title: movie.title || "",
   description: movie.description || "",
+  releaseYear: String(movie.ReleaseYear ?? ""),
   runtime: movie.runtime == null ? "" : String(movie.runtime),
   genre: Array.isArray(movie.genre ?? movie.genres)
     ? (movie.genre ?? movie.genres).join(", ")
@@ -49,9 +54,10 @@ const movieToForm = (movie) => ({
         .join("\n")
     : "",
   director: movie.director || "",
+  ReceivedOscar: movie.ReceivedOscar === true,
 });
 
-const prepareMovieData = (form, title, releaseYear, receivedOscar) => {
+const prepareMovieData = (form) => {
   const cast = form.cast
     .split("\n")
     .map((line) => line.trim())
@@ -74,10 +80,10 @@ const prepareMovieData = (form, title, releaseYear, receivedOscar) => {
   const averageRating = form.average_rating.trim()
     ? Number(form.average_rating)
     : undefined;
-  const numericReleaseYear = Number(releaseYear);
+  const numericReleaseYear = Number(form.releaseYear);
 
   if (
-    !releaseYear.trim() ||
+    !form.releaseYear.trim() ||
     !Number.isInteger(numericReleaseYear) ||
     numericReleaseYear < 1888
   ) {
@@ -96,7 +102,7 @@ const prepareMovieData = (form, title, releaseYear, receivedOscar) => {
 
   return {
     movieData: {
-      title: title.trim(),
+      title: form.title.trim(),
       description: form.description.trim(),
       ReleaseYear: numericReleaseYear,
       genre: form.genre
@@ -107,7 +113,7 @@ const prepareMovieData = (form, title, releaseYear, receivedOscar) => {
       backdrop_url: form.backdrop_url.trim(),
       trailer_url: form.trailer_url.trim(),
       mtrcb_rating: form.mtrcb_rating.trim(),
-      ReceivedOscar: receivedOscar,
+      ReceivedOscar: form.ReceivedOscar,
       cast,
       director: form.director.trim(),
       ...(runtime !== undefined && { runtime }),
@@ -123,13 +129,6 @@ function MovieForm({
   onMovieAdded,
   onMovieUpdated,
 }) {
-  const [movieTitle, setMovieTitle] = useState(() => movie?.title || "");
-  const [releaseYear, setReleaseYear] = useState(
-    () => String(movie?.ReleaseYear ?? ""),
-  );
-  const [receivedOscar, setReceivedOscar] = useState(
-    () => movie?.ReceivedOscar === true,
-  );
   const [movieForm, setMovieForm] = useState(() =>
     movie ? movieToForm(movie) : { ...emptyMovieForm },
   );
@@ -154,19 +153,6 @@ function MovieForm({
 
   const handleChange = (event) => {
     const { checked, name, type, value } = event.target;
-    if (name === "title") {
-      setMovieTitle(value);
-      return;
-    }
-    if (name === "releaseYear") {
-      setReleaseYear(value);
-      return;
-    }
-    if (name === "ReceivedOscar") {
-      setReceivedOscar(checked);
-      return;
-    }
-
     setMovieForm((currentForm) => ({
       ...currentForm,
       [name]: type === "checkbox" ? checked : value,
@@ -221,12 +207,7 @@ function MovieForm({
     event.preventDefault();
     setFormError("");
 
-    const { error: validationError, movieData } = prepareMovieData(
-      movieForm,
-      movieTitle,
-      releaseYear,
-      receivedOscar,
-    );
+    const { error: validationError, movieData } = prepareMovieData(movieForm);
     if (validationError) {
       setFormError(validationError);
       return;
@@ -277,7 +258,7 @@ function MovieForm({
             <input
               name="title"
               placeholder="Movie title"
-              value={movieTitle}
+              value={movieForm.title}
               onChange={handleChange}
               required
               autoFocus
@@ -301,7 +282,7 @@ function MovieForm({
                 min="1888"
                 step="1"
                 placeholder="e.g. 2024"
-                value={releaseYear}
+                value={movieForm.releaseYear}
                 onChange={handleChange}
                 required
               />
@@ -408,7 +389,7 @@ function MovieForm({
             <input
               name="ReceivedOscar"
               type="checkbox"
-              checked={receivedOscar}
+              checked={movieForm.ReceivedOscar}
               onChange={handleChange}
             />
             Received Oscar

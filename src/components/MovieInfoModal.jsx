@@ -8,10 +8,7 @@ import {
 } from "./movieUtils";
 import "./MovieInfoModal.css";
 
-const formatFieldName = (field) =>
-  field
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (character) => character.toUpperCase());
+const formatFieldName = (field) => field.replace(/_/g, " ").replace(/\b\w/g, (character) => character.toUpperCase());
 
 function MovieValue({ value }) {
   if (value === null) {
@@ -142,17 +139,12 @@ function MovieInfoModal({
     "backdrop_url",
     "trailer_url",
   ]);
-  const additionalFields = Object.entries(movie).filter(
-    ([field]) => !featuredFields.has(field),
-  );
+  const additionalFields = Object.entries(movie).filter(([field]) => !featuredFields.has(field));
   const posterUrl = movie.poster_url || movie.backdrop_url;
   const genres = getMovieGenres(movie);
   const trailerSource = getTrailerSource(movie.trailer_url);
-  const currentMovieIndex = movies.findIndex(
-    (currentMovie) => currentMovie.id === movie.id,
-  );
-  const previousMovie =
-    movies[(currentMovieIndex - 1 + movies.length) % movies.length];
+  const currentMovieIndex = movies.findIndex((currentMovie) => currentMovie.id === movie.id);
+  const previousMovie = movies[(currentMovieIndex - 1 + movies.length) % movies.length];
   const nextMovie = movies[(currentMovieIndex + 1) % movies.length];
 
   const handleMovieChange = (nextMovie, direction) => {
