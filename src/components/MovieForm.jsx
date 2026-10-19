@@ -1,12 +1,18 @@
 import { useState } from "react";
-import { addDoc, collection, doc, setDoc } from "firebase/firestore";
+import {
+  addDoc,
+  collection,
+  deleteField,
+  doc,
+  updateDoc,
+} from "firebase/firestore";
 import { db } from "../config/firebase";
 import "./MovieForm.css";
 
+const moviesCollectionRef = collection(db, "movies");
+
 const emptyMovieForm = {
-  title: "",
   description: "",
-  release_date: "",
   runtime: "",
   genre: "",
   poster_url: "",
@@ -14,7 +20,6 @@ const emptyMovieForm = {
   trailer_url: "",
   average_rating: "",
   mtrcb_rating: "",
-  hasOscar: false,
   cast: "",
   director: "",
 };
@@ -23,14 +28,7 @@ const mtrcbRatings = ["G", "PG", "PG-13", "R-13", "R-16", "R-18", "X"];
 
 const movieToForm = (movie) => ({
   ...emptyMovieForm,
-  title: movie.title || "",
   description: movie.description || "",
-  release_date:
-    typeof movie.release_date === "string"
-      ? movie.release_date
-      : movie.release_date?.toDate instanceof Function
-        ? movie.release_date.toDate().toISOString().slice(0, 10)
-        : "",
   runtime: movie.runtime == null ? "" : String(movie.runtime),
   genre: Array.isArray(movie.genre ?? movie.genres)
     ? (movie.genre ?? movie.genres).join(", ")
@@ -41,7 +39,6 @@ const movieToForm = (movie) => ({
   average_rating:
     movie.average_rating == null ? "" : String(movie.average_rating),
   mtrcb_rating: movie.mtrcb_rating || "",
-  hasOscar: movie.hasOscar === true,
   cast: Array.isArray(movie.cast)
     ? movie.cast
         .map((member) =>
@@ -54,7 +51,7 @@ const movieToForm = (movie) => ({
   director: movie.director || "",
 });
 
-const prepareMovieData = (form) => {
+const prepareMovieData = (form, title, releaseYear, receivedOscar) => {
   const cast = form.cast
     .split("\n")
     .map((line) => line.trim())
@@ -77,6 +74,15 @@ const prepareMovieData = (form) => {
   const averageRating = form.average_rating.trim()
     ? Number(form.average_rating)
     : undefined;
+  const numericReleaseYear = Number(releaseYear);
+
+  if (
+    !releaseYear.trim() ||
+    !Number.isInteger(numericReleaseYear) ||
+    numericReleaseYear < 1888
+  ) {
+    return { error: "Enter a valid release year (1888 or later)." };
+  }
 
   if (
     (runtime !== undefined && (!Number.isFinite(runtime) || runtime < 0)) ||
@@ -90,9 +96,9 @@ const prepareMovieData = (form) => {
 
   return {
     movieData: {
-      title: form.title.trim(),
+      title: title.trim(),
       description: form.description.trim(),
-      release_date: form.release_date.trim(),
+      ReleaseYear: numericReleaseYear,
       genre: form.genre
         .split(",")
         .map((genre) => genre.trim())
@@ -101,7 +107,7 @@ const prepareMovieData = (form) => {
       backdrop_url: form.backdrop_url.trim(),
       trailer_url: form.trailer_url.trim(),
       mtrcb_rating: form.mtrcb_rating.trim(),
-      hasOscar: form.hasOscar,
+      ReceivedOscar: receivedOscar,
       cast,
       director: form.director.trim(),
       ...(runtime !== undefined && { runtime }),
@@ -117,6 +123,13 @@ function MovieForm({
   onMovieAdded,
   onMovieUpdated,
 }) {
+  const [movieTitle, setMovieTitle] = useState(() => movie?.title || "");
+  const [releaseYear, setReleaseYear] = useState(
+    () => String(movie?.ReleaseYear ?? ""),
+  );
+  const [receivedOscar, setReceivedOscar] = useState(
+    () => movie?.ReceivedOscar === true,
+  );
   const [movieForm, setMovieForm] = useState(() =>
     movie ? movieToForm(movie) : { ...emptyMovieForm },
   );
@@ -141,6 +154,19 @@ function MovieForm({
 
   const handleChange = (event) => {
     const { checked, name, type, value } = event.target;
+    if (name === "title") {
+      setMovieTitle(value);
+      return;
+    }
+    if (name === "releaseYear") {
+      setReleaseYear(value);
+      return;
+    }
+    if (name === "ReceivedOscar") {
+      setReceivedOscar(checked);
+      return;
+    }
+
     setMovieForm((currentForm) => ({
       ...currentForm,
       [name]: type === "checkbox" ? checked : value,
@@ -149,47 +175,11 @@ function MovieForm({
 
   const handleCreateMovie = async (movieData) => {
     try {
-      const movieCollection = collection(db, "movies");
-
-      const movieDocument = await addDoc(movieCollection, {
-        title: movieData.title,
-        description: movieData.description,
-        release_date: movieData.release_date,
-        genre: movieData.genre,
-        poster_url: movieData.poster_url,
-        backdrop_url: movieData.backdrop_url,
-        trailer_url: movieData.trailer_url,
-        mtrcb_rating: movieData.mtrcb_rating,
-        hasOscar: movieData.hasOscar,
-        cast: movieData.cast,
-        director: movieData.director,
-        ...(movieData.runtime !== undefined && {
-          runtime: movieData.runtime,
-        }),
-        ...(movieData.average_rating !== undefined && {
-          average_rating: movieData.average_rating,
-        }),
-      });
-
+      // CREATE: Add a new movie document to Firestore.
+      const movieDocument = await addDoc(moviesCollectionRef, movieData);
       onMovieAdded({
         id: movieDocument.id,
-        title: movieData.title,
-        description: movieData.description,
-        release_date: movieData.release_date,
-        genre: movieData.genre,
-        poster_url: movieData.poster_url,
-        backdrop_url: movieData.backdrop_url,
-        trailer_url: movieData.trailer_url,
-        mtrcb_rating: movieData.mtrcb_rating,
-        hasOscar: movieData.hasOscar,
-        cast: movieData.cast,
-        director: movieData.director,
-        ...(movieData.runtime !== undefined && {
-          runtime: movieData.runtime,
-        }),
-        ...(movieData.average_rating !== undefined && {
-          average_rating: movieData.average_rating,
-        }),
+        ...movieData,
       });
       setIsClosing(true);
     } catch (error) {
@@ -202,45 +192,19 @@ function MovieForm({
 
   const handleUpdateMovie = async (movieId, movieData) => {
     try {
-      await setDoc(doc(db, "movies", movieId), {
-        title: movieData.title,
-        description: movieData.description,
-        release_date: movieData.release_date,
-        genre: movieData.genre,
-        poster_url: movieData.poster_url,
-        backdrop_url: movieData.backdrop_url,
-        trailer_url: movieData.trailer_url,
-        mtrcb_rating: movieData.mtrcb_rating,
-        hasOscar: movieData.hasOscar,
-        cast: movieData.cast,
-        director: movieData.director,
-        ...(movieData.runtime !== undefined && {
-          runtime: movieData.runtime,
+      const updateData = {
+        ...movieData,
+        ...(movieData.runtime === undefined && { runtime: deleteField() }),
+        ...(movieData.average_rating === undefined && {
+          average_rating: deleteField(),
         }),
-        ...(movieData.average_rating !== undefined && {
-          average_rating: movieData.average_rating,
-        }),
-      });
+      };
 
+      // UPDATE: Save changes to the existing movie document.
+      await updateDoc(doc(db, "movies", movieId), updateData);
       onMovieUpdated({
         id: movieId,
-        title: movieData.title,
-        description: movieData.description,
-        release_date: movieData.release_date,
-        genre: movieData.genre,
-        poster_url: movieData.poster_url,
-        backdrop_url: movieData.backdrop_url,
-        trailer_url: movieData.trailer_url,
-        mtrcb_rating: movieData.mtrcb_rating,
-        hasOscar: movieData.hasOscar,
-        cast: movieData.cast,
-        director: movieData.director,
-        ...(movieData.runtime !== undefined && {
-          runtime: movieData.runtime,
-        }),
-        ...(movieData.average_rating !== undefined && {
-          average_rating: movieData.average_rating,
-        }),
+        ...movieData,
       });
       setIsClosing(true);
     } catch (error) {
@@ -257,8 +221,12 @@ function MovieForm({
     event.preventDefault();
     setFormError("");
 
-    const { error: validationError, movieData } =
-      prepareMovieData(movieForm);
+    const { error: validationError, movieData } = prepareMovieData(
+      movieForm,
+      movieTitle,
+      releaseYear,
+      receivedOscar,
+    );
     if (validationError) {
       setFormError(validationError);
       return;
@@ -308,7 +276,8 @@ function MovieForm({
             Title *
             <input
               name="title"
-              value={movieForm.title}
+              placeholder="Movie title"
+              value={movieTitle}
               onChange={handleChange}
               required
               autoFocus
@@ -325,12 +294,16 @@ function MovieForm({
           </label>
           <div className="movie-form-grid">
             <label>
-              Release date
+              Release year *
               <input
-                name="release_date"
-                type="date"
-                value={movieForm.release_date}
+                name="releaseYear"
+                type="number"
+                min="1888"
+                step="1"
+                placeholder="e.g. 2024"
+                value={releaseYear}
                 onChange={handleChange}
+                required
               />
             </label>
             <label>
@@ -433,12 +406,12 @@ function MovieForm({
           </label>
           <label className="movie-form-checkbox">
             <input
-              name="hasOscar"
+              name="ReceivedOscar"
               type="checkbox"
-              checked={movieForm.hasOscar}
+              checked={receivedOscar}
               onChange={handleChange}
             />
-            Has Oscar
+            Received Oscar
           </label>
           {formError && (
             <p className="movie-form-error" role="alert">

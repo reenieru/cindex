@@ -131,11 +131,11 @@ function MovieInfoModal({
     "title",
     "genre",
     "genres",
-    "release_date",
+    "ReleaseYear",
     "runtime",
     "mtrcb_rating",
     "average_rating",
-    "hasOscar",
+    "ReceivedOscar",
     "director",
     "description",
     "poster_url",
@@ -228,7 +228,7 @@ function MovieInfoModal({
             </header>
             <div className="movie-info-meta">
               <span>
-                {getReleaseYear(movie.release_date) || "Year unavailable"}
+                {getReleaseYear(movie.ReleaseYear) || "Year unavailable"}
               </span>
               <span>
                 {movie.runtime != null
@@ -317,10 +317,10 @@ function MovieInfoModal({
             <h3>Awards</h3>
             <dl className="movie-info-fields">
               <div
-                className={`movie-info-field${movie.hasOscar === true ? " movie-info-field-oscar" : ""}`}
+                className={`movie-info-field${movie.ReceivedOscar === true ? " movie-info-field-oscar" : ""}`}
               >
-                <dt>Oscar Winner</dt>
-                <dd>{movie.hasOscar === true ? "Yes" : "No"}</dd>
+                <dt>Received Oscar</dt>
+                <dd>{movie.ReceivedOscar === true ? "Yes" : "No"}</dd>
               </div>
             </dl>
           </section>

@@ -6,21 +6,14 @@ service cloud.firestore {
       function isValidMovie(movie) {
         return movie.keys().hasAll([
             'title',
-            'description',
-            'release_date',
-            'genre',
-            'poster_url',
-            'backdrop_url',
-            'trailer_url',
-            'mtrcb_rating',
-            'hasOscar',
-            'cast',
-            'director'
+            'ReleaseYear',
+            'ReceivedOscar'
           ])
           && movie.keys().hasOnly([
             'title',
+            'ReleaseYear',
+            'ReceivedOscar',
             'description',
-            'release_date',
             'runtime',
             'genre',
             'poster_url',
@@ -28,21 +21,20 @@ service cloud.firestore {
             'trailer_url',
             'average_rating',
             'mtrcb_rating',
-            'hasOscar',
             'cast',
             'director'
           ])
           && movie.title is string
-          && movie.description is string
-          && movie.release_date is string
-          && movie.genre is list
-          && movie.poster_url is string
-          && movie.backdrop_url is string
-          && movie.trailer_url is string
-          && movie.mtrcb_rating is string
-          && movie.hasOscar is bool
-          && movie.cast is list
-          && movie.director is string
+          && movie.ReleaseYear is int
+          && movie.ReceivedOscar is bool
+          && (!('description' in movie) || movie.description is string)
+          && (!('genre' in movie) || movie.genre is list)
+          && (!('poster_url' in movie) || movie.poster_url is string)
+          && (!('backdrop_url' in movie) || movie.backdrop_url is string)
+          && (!('trailer_url' in movie) || movie.trailer_url is string)
+          && (!('mtrcb_rating' in movie) || movie.mtrcb_rating is string)
+          && (!('cast' in movie) || movie.cast is list)
+          && (!('director' in movie) || movie.director is string)
           && (!('runtime' in movie) || movie.runtime is number)
           && (!('average_rating' in movie)
             || movie.average_rating is number);

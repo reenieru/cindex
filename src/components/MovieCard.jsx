@@ -33,7 +33,7 @@ function MovieCard({
             i
           </button>
           <div className="movie-choice-meta">
-            <span>{getReleaseYear(movie.release_date) || "Year N/A"}</span>
+            <span>{getReleaseYear(movie.ReleaseYear) || "Year N/A"}</span>
             <span>
               {movie.average_rating != null
                 ? `★ ${movie.average_rating}`

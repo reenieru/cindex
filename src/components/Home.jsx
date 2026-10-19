@@ -1,27 +1,26 @@
 import { useCallback, useEffect, useState } from "react";
 import { signOut } from "firebase/auth";
-import { collection, deleteDoc, doc, getDocs } from "firebase/firestore";
+import {
+  collection,
+  deleteDoc,
+  doc,
+  getDocs,
+} from "firebase/firestore";
 import { auth, db } from "../config/firebase";
 import logoImg from "../assets/LogoWText.png";
 import MovieForm from "./MovieForm";
 import MovieCard from "./MovieCard";
+import FeaturedMovieCarousel from "./FeaturedMovieCarousel";
 import MovieInfoModal from "./MovieInfoModal";
-import {
-  formatRuntime,
-  getMovieGenres,
-  getMtrcbRatingClass,
-  getReleaseYear,
-  getTrailerSource,
-} from "./movieUtils";
+import { getReleaseYear } from "./movieUtils";
 import "./Homepage.css";
 
 const copyrightYear = new Date().getFullYear();
+const moviesCollectionRef = collection(db, "movies");
 
 function Home() {
   const [movies, setMovies] = useState([]);
   const [featuredMovieId, setFeaturedMovieId] = useState(null);
-  const [revealedTrailerMovieId, setRevealedTrailerMovieId] = useState(null);
-  const [showMovieInfo, setShowMovieInfo] = useState(false);
   const [movieInfoSelection, setMovieInfoSelection] = useState(null);
   const [movieInfoDirection, setMovieInfoDirection] = useState("next");
   const [showAddMovie, setShowAddMovie] = useState(false);
@@ -40,23 +39,39 @@ function Home() {
     return () => window.clearTimeout(timer);
   }, []);
 
-  const fetchMovies = useCallback(async () => {
-    const snapshot = await getDocs(collection(db, "movies"));
-    return snapshot.docs.map((movieDocument) => {
-      const movieData = movieDocument.data();
+  // READ: Fetch movie documents from the Firestore collection.
+  const getMovieList = useCallback(async () => {
+    const snapshot = await getDocs(moviesCollectionRef);
+    const rawMovieList = snapshot.docs.map((movieDocument) => ({
+      ...movieDocument.data(),
+      id: movieDocument.id,
+    }));
+    console.log("Movie data from Firestore:", rawMovieList);
+
+    const filteredData = rawMovieList.map((movieData) => {
+      const storedReleaseYear =
+        movieData.ReleaseYear ?? movieData.release_date;
+      const parsedReleaseYear = getReleaseYear(storedReleaseYear);
+      const receivedOscar =
+        movieData.ReceivedOscar ??
+        movieData.RecievedOscar ??
+        movieData.hasOscar ??
+        false;
       return {
-        id: movieDocument.id,
+        id: movieData.id,
         title: movieData.title,
-        description: movieData.description,
-        release_date: movieData.release_date,
-        genre: movieData.genre,
-        poster_url: movieData.poster_url,
-        backdrop_url: movieData.backdrop_url,
-        trailer_url: movieData.trailer_url,
-        mtrcb_rating: movieData.mtrcb_rating,
-        hasOscar: movieData.hasOscar,
-        cast: movieData.cast,
-        director: movieData.director,
+        description: movieData.description ?? "",
+        ReleaseYear: parsedReleaseYear
+          ? Number(parsedReleaseYear)
+          : undefined,
+        genre: movieData.genre ?? [],
+        poster_url: movieData.poster_url ?? "",
+        backdrop_url: movieData.backdrop_url ?? "",
+        trailer_url: movieData.trailer_url ?? "",
+        mtrcb_rating: movieData.mtrcb_rating ?? "",
+        ReceivedOscar: receivedOscar,
+        cast: movieData.cast ?? [],
+        director: movieData.director ?? "",
         ...(movieData.runtime !== undefined && {
           runtime: movieData.runtime,
         }),
@@ -65,12 +80,14 @@ function Home() {
         }),
       };
     });
+    console.log("Filtered movie data:", filteredData);
+    return filteredData;
   }, []);
 
   useEffect(() => {
     let isCurrent = true;
 
-    fetchMovies()
+    getMovieList()
       .then((loadedMovies) => {
         if (isCurrent) {
           setMovies(loadedMovies);
@@ -95,37 +112,7 @@ function Home() {
     return () => {
       isCurrent = false;
     };
-  }, [fetchMovies]);
-
-  const handleRetry = async () => {
-    setIsLoading(true);
-    setLoadError(null);
-    try {
-      const loadedMovies = await fetchMovies();
-      setMovies(loadedMovies);
-      setFeaturedMovieId(loadedMovies[0]?.id ?? null);
-    } catch (error) {
-      console.error("Failed to load movies from Firestore.", error);
-      setLoadError({
-        code: error.code || "unknown",
-        message: error.message || "Unknown Firestore error",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (!featuredMovieId) {
-      return undefined;
-    }
-
-    const timer = window.setTimeout(
-      () => setRevealedTrailerMovieId(featuredMovieId),
-      1500,
-    );
-    return () => window.clearTimeout(timer);
-  }, [featuredMovieId]);
+  }, [getMovieList]);
 
   const handleLogout = async () => {
     setLogoutError("");
@@ -138,39 +125,15 @@ function Home() {
   };
 
   const featuredMovie = movies.find((movie) => movie.id === featuredMovieId) ?? movies[0] ?? null;
-  const trailerSource = getTrailerSource(featuredMovie?.trailer_url, true);
-  const showTrailer = revealedTrailerMovieId === featuredMovie?.id;
-  const genres = getMovieGenres(featuredMovie);
-  const heroImage = featuredMovie?.backdrop_url || featuredMovie?.poster_url;
   const awardWinningMovies = movies.filter(
-    (movie) => movie.hasOscar === true,
+    (movie) => movie.ReceivedOscar === true,
   );
 
   const handleFeatureMovie = useCallback((movieId) => {
     if (movieId !== featuredMovieId) {
-      setRevealedTrailerMovieId(null);
-      setShowMovieInfo(false);
       setFeaturedMovieId(movieId);
     }
   }, [featuredMovieId]);
-
-  useEffect(() => {
-    if (movies.length < 2) {
-      return undefined;
-    }
-
-    const timer = window.setInterval(() => {
-      const currentIndex = movies.findIndex(
-        (movie) => movie.id === featuredMovieId,
-      );
-      const nextMovie = movies[(currentIndex + 1) % movies.length];
-      if (nextMovie) {
-        handleFeatureMovie(nextMovie.id);
-      }
-    }, 18000);
-
-    return () => window.clearInterval(timer);
-  }, [movies, featuredMovieId, handleFeatureMovie]);
 
   const handleCloseMovieInfo = useCallback(() => {
     setMovieInfoSelection(null);
@@ -185,6 +148,7 @@ function Home() {
 
   const handleDeleteMovie = async (movie) => {
     try {
+      // DELETE: Remove this movie document from Firestore.
       await deleteDoc(doc(db, "movies", movie.id));
     } catch (error) {
       console.error("Failed to delete movie from Firestore.", error);
@@ -197,9 +161,6 @@ function Home() {
     setMovies(remainingMovies);
     setFeaturedMovieId((currentId) =>
       currentId === movie.id ? remainingMovies[0]?.id ?? null : currentId,
-    );
-    setRevealedTrailerMovieId((currentId) =>
-      currentId === movie.id ? null : currentId,
     );
     setMovieInfoSelection(null);
   };
@@ -229,9 +190,6 @@ function Home() {
           <p>
             {loadError.code}: {loadError.message}
           </p>
-          <button className="home-action" type="button" onClick={handleRetry}>
-            Retry
-          </button>
         </section>
       ) : (
         <>
@@ -327,143 +285,11 @@ function Home() {
             </section>
           ) : (
             <>
-          <section
-            className="featured-hero"
-            id="home"
-            aria-labelledby="featured-title"
-          >
-            <div className="hero-trailer" aria-hidden="true">
-              {showTrailer &&
-                trailerSource?.type === "embed" && (
-                  <iframe
-                    key={featuredMovie.id}
-                    src={trailerSource.src}
-                    title={`${featuredMovie.title || "Featured movie"} trailer`}
-                    allow="autoplay; encrypted-media"
-                    referrerPolicy="strict-origin-when-cross-origin"
-                    loading="eager"
-                    style={{ pointerEvents: "none" }}
-                    tabIndex={-1}
-                  />
-                )}
-              {showTrailer &&
-                trailerSource?.type === "video" && (
-                  <video
-                    key={featuredMovie.id}
-                    src={trailerSource.src}
-                    autoPlay
-                    muted
-                    loop
-                    playsInline
-                    controls={false}
-                    disablePictureInPicture
-                    disableRemotePlayback
-                    controlsList="nodownload noplaybackrate noremoteplayback"
-                    style={{ pointerEvents: "none" }}
-                    tabIndex={-1}
-                  />
-                )}
-            </div>
-
-            {heroImage && (
-              <img
-                key={featuredMovie.id}
-                className={`hero-poster${showTrailer && trailerSource ? " hero-poster-fade" : ""}`}
-                src={heroImage}
-                alt=""
-                aria-hidden="true"
-              />
-            )}
-            <div className="hero-shade" />
-
-            {movies.length > 1 && (
-              <div className="hero-pagination" aria-label="Featured movie selection">
-                {movies.map((movie, index) => (
-                  <button
-                    key={movie.id}
-                    className={`hero-dot${movie.id === featuredMovie.id ? " hero-dot-active" : ""}`}
-                    type="button"
-                    aria-label={`Show ${movie.title || `movie ${index + 1}`}`}
-                    aria-current={movie.id === featuredMovie.id ? "true" : undefined}
-                    onClick={() => handleFeatureMovie(movie.id)}
-                  />
-                ))}
-              </div>
-            )}
-
-            <div className="hero-content" key={featuredMovie.id}>
-              <h1 id="featured-title" className="hero-title">
-                {featuredMovie.title || "Untitled movie"}
-              </h1>
-              {genres.length > 0 && (
-                <p className="hero-genres" aria-label="Genres">
-                  {genres.map((genre, index) => (
-                    <span key={`${genre}-${index}`}>
-                      {index > 0 && (
-                        <span className="hero-genre-separator" aria-hidden="true">
-                          •
-                        </span>
-                      )}
-                      {genre}
-                    </span>
-                  ))}
-                </p>
-              )}
-              <div className="hero-meta">
-                {getReleaseYear(featuredMovie.release_date) && (
-                  <span className="hero-year">
-                    {getReleaseYear(featuredMovie.release_date)}
-                  </span>
-                )}
-                <span
-                  className={`hero-mtrcb-rating hero-mtrcb-rating-${getMtrcbRatingClass(featuredMovie.mtrcb_rating)}`}
-                >
-                  {featuredMovie.mtrcb_rating || "Not Rated"}
-                </span>
-                {featuredMovie.hasOscar === true && (
-                  <span className="hero-oscar-winner">Oscar Winner</span>
-                )}
-                {featuredMovie.average_rating != null && (
-                  <span className="hero-rating">
-                    ★ {featuredMovie.average_rating}
-                  </span>
-                )}
-              </div>
-              {featuredMovie.description && (
-                <p className="hero-description">{featuredMovie.description}</p>
-              )}
-              {showMovieInfo && (
-                <div className="hero-extra-info">
-                  {featuredMovie.runtime != null && (
-                    <span>{formatRuntime(featuredMovie.runtime)}</span>
-                  )}
-                  {featuredMovie.director && (
-                    <span>Directed by {featuredMovie.director}</span>
-                  )}
-                  {Array.isArray(featuredMovie.cast) &&
-                    featuredMovie.cast.length > 0 && (
-                      <span>
-                        Starring{" "}
-                        {featuredMovie.cast
-                          .map((member) => member.actor_name)
-                          .filter(Boolean)
-                          .join(", ")}
-                      </span>
-                    )}
-                </div>
-              )}
-              <div className="hero-actions">
-                <button
-                  className="hero-info-button"
-                  type="button"
-                  onClick={() => setShowMovieInfo(!showMovieInfo)}
-                  aria-expanded={showMovieInfo}
-                >
-                  {showMovieInfo ? "Hide Information" : "View Information"}
-                </button>
-              </div>
-            </div>
-          </section>
+          <FeaturedMovieCarousel
+            movies={movies}
+            featuredMovieId={featuredMovie?.id}
+            onFeatureMovie={handleFeatureMovie}
+          />
 
           <section
             className="movie-catalogue"
