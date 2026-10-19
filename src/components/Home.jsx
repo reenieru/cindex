@@ -12,7 +12,6 @@ import MovieForm from "./MovieForm";
 import MovieCard from "./MovieCard";
 import FeaturedMovieCarousel from "./FeaturedMovieCarousel";
 import MovieInfoModal from "./MovieInfoModal";
-import { getReleaseYear } from "./movieUtils";
 import "./Homepage.css";
 
 const copyrightYear = new Date().getFullYear();
@@ -49,27 +48,17 @@ function Home() {
     console.log("Movie data from Firestore:", rawMovieList);
 
     const filteredData = rawMovieList.map((movieData) => {
-      const storedReleaseYear =
-        movieData.ReleaseYear ?? movieData.release_date;
-      const parsedReleaseYear = getReleaseYear(storedReleaseYear);
-      const receivedOscar =
-        movieData.ReceivedOscar ??
-        movieData.RecievedOscar ??
-        movieData.hasOscar ??
-        false;
       return {
         id: movieData.id,
         title: movieData.title,
         description: movieData.description ?? "",
-        ReleaseYear: parsedReleaseYear
-          ? Number(parsedReleaseYear)
-          : undefined,
+        ReleaseYear: movieData.ReleaseYear,
         genre: movieData.genre ?? [],
         poster_url: movieData.poster_url ?? "",
         backdrop_url: movieData.backdrop_url ?? "",
         trailer_url: movieData.trailer_url ?? "",
         mtrcb_rating: movieData.mtrcb_rating ?? "",
-        ReceivedOscar: receivedOscar,
+        ReceivedOscar: movieData.ReceivedOscar,
         cast: movieData.cast ?? [],
         director: movieData.director ?? "",
         ...(movieData.runtime !== undefined && {

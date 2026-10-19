@@ -1,17 +1,5 @@
-export const getReleaseYear = (releaseDate) => {
-  if (releaseDate && typeof releaseDate === "object") {
-    if (typeof releaseDate.toDate === "function") {
-      return String(releaseDate.toDate().getUTCFullYear());
-    }
-
-    const seconds = releaseDate.seconds ?? releaseDate._seconds;
-    if (typeof seconds === "number") {
-      return String(new Date(seconds * 1000).getUTCFullYear());
-    }
-  }
-
-  const year = String(releaseDate || "").match(/\b\d{4}\b/);
-  return year ? year[0] : null;
+export const getReleaseYear = (releaseYear) => {
+  return Number.isInteger(releaseYear) ? String(releaseYear) : null;
 };
 
 export const getMovieGenres = (movie) => {
