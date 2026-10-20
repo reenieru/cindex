@@ -17,10 +17,12 @@
 }
 
 .movie-info-dialog {
+  display: flex;
+  flex-direction: column;
   width: 100%;
   max-height: min(calc(100vh - 40px), 820px);
   padding: 0;
-  overflow-y: auto;
+  overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 22px;
   background: rgba(18, 16, 16, 0.96);
@@ -32,15 +34,23 @@
   scrollbar-width: thin;
 }
 
-.movie-info-dialog::-webkit-scrollbar {
+.movie-info-scroll-area {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+  scrollbar-width: thin;
+}
+
+.movie-info-scroll-area::-webkit-scrollbar {
   width: 8px;
 }
 
-.movie-info-dialog::-webkit-scrollbar-track {
+.movie-info-scroll-area::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.movie-info-dialog::-webkit-scrollbar-thumb {
+.movie-info-scroll-area::-webkit-scrollbar-thumb {
   border: 2px solid transparent;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.3);
@@ -50,6 +60,7 @@
 .movie-info-poster {
   position: relative;
   display: flex;
+  flex: 0 0 auto;
   min-height: clamp(340px, 52vh, 470px);
   align-items: flex-end;
   padding: 32px;
@@ -473,6 +484,16 @@
   font-style: italic;
 }
 
+.movie-info-footer {
+  position: relative;
+  z-index: 3;
+  flex: 0 0 auto;
+  padding: 12px 28px 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(18, 16, 16, 0.98);
+  box-shadow: 0 -8px 22px rgba(0, 0, 0, 0.24);
+}
+
 .movie-info-management {
   display: flex;
   flex-wrap: wrap;
@@ -515,7 +536,7 @@
 }
 
 .movie-info-delete-error {
-  margin: -12px 0 0;
+  margin: 10px 0 0;
   color: #ff9ca4;
   font: 400 13px/1.5 var(--font-body);
 }
@@ -594,6 +615,10 @@
     padding: 20px;
   }
 
+  .movie-info-footer {
+    padding: 12px 20px 16px;
+  }
+
   .movie-info-fields {
     grid-template-columns: 1fr;
     gap: 12px;
@@ -638,6 +663,10 @@
   .movie-info-poster,
   .movie-info-content {
     animation: none;
+  }
+
+  .movie-info-scroll-area {
+    scroll-behavior: auto;
   }
 
   .movie-info-close {

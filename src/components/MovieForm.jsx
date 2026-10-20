@@ -7,6 +7,7 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { db } from "../config/firebase";
+import { useMovieFormAnimation } from "../animations/animationHooks";
 import "./MovieForm.css";
 
 const moviesCollectionRef = collection(db, "movies");
@@ -134,20 +135,12 @@ function MovieForm({
   );
   const [formError, setFormError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
-  const [isClosing, setIsClosing] = useState(false);
+  const { isClosing, close, handleAnimationEnd } =
+    useMovieFormAnimation(onClose);
 
   const handleClose = () => {
     if (!isSaving) {
-      setIsClosing(true);
-    }
-  };
-
-  const handleAnimationEnd = (event) => {
-    if (
-      event.target === event.currentTarget &&
-      event.animationName === "movie-form-dialog-out"
-    ) {
-      onClose();
+      close();
     }
   };
 
@@ -167,7 +160,7 @@ function MovieForm({
         id: movieDocument.id,
         ...movieData,
       });
-      setIsClosing(true);
+      close();
     } catch (error) {
       console.error("Failed to add movie in Firestore.", error);
       setFormError(
@@ -192,7 +185,7 @@ function MovieForm({
         id: movieId,
         ...movieData,
       });
-      setIsClosing(true);
+      close();
     } catch (error) {
       console.error("Failed to update movie in Firestore.", error);
       setFormError(

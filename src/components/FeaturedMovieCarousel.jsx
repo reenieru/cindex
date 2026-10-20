@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useFeaturedMovieAnimation } from "../animations/animationHooks";
 import {
   formatRuntime,
   getMovieGenres,
@@ -8,49 +9,23 @@ import {
 } from "./movieUtils";
 
 function FeaturedMovieCarousel({ movies, featuredMovieId, onFeatureMovie }) {
-  const [revealedTrailerMovieId, setRevealedTrailerMovieId] = useState(null);
   const [movieInfoSelection, setMovieInfoSelection] = useState(null);
 
   const featuredMovie =
     movies.find((movie) => movie.id === featuredMovieId) ?? movies[0];
   const currentFeaturedMovieId = featuredMovie?.id;
-
-  useEffect(() => {
-    if (!currentFeaturedMovieId) {
-      return undefined;
-    }
-
-    const timer = window.setTimeout(
-      () => setRevealedTrailerMovieId(currentFeaturedMovieId),
-      1500,
-    );
-    return () => window.clearTimeout(timer);
-  }, [currentFeaturedMovieId]);
-
-  useEffect(() => {
-    if (movies.length < 2) {
-      return undefined;
-    }
-
-    const timer = window.setInterval(() => {
-      const currentIndex = movies.findIndex(
-        (movie) => movie.id === featuredMovie?.id,
-      );
-      const nextMovie = movies[(currentIndex + 1) % movies.length];
-      if (nextMovie) {
-        onFeatureMovie(nextMovie.id);
-      }
-    }, 18000);
-
-    return () => window.clearInterval(timer);
-  }, [movies, featuredMovie, onFeatureMovie]);
+  const showTrailer = useFeaturedMovieAnimation({
+    currentFeaturedMovieId,
+    featuredMovie,
+    movies,
+    onFeatureMovie,
+  });
 
   if (!featuredMovie) {
     return null;
   }
 
   const trailerSource = getTrailerSource(featuredMovie.trailer_url, true);
-  const showTrailer = revealedTrailerMovieId === featuredMovie.id;
   const showMovieInfo = movieInfoSelection === featuredMovie.id;
   const genres = getMovieGenres(featuredMovie);
   const heroImage = featuredMovie.backdrop_url || featuredMovie.poster_url;

@@ -171,6 +171,7 @@ function MovieInfoModal({
           aria-modal="true"
           aria-labelledby="movie-info-title"
         >
+        <div className="movie-info-scroll-area">
         <div
           className="movie-info-poster"
           style={
@@ -331,6 +332,9 @@ function MovieInfoModal({
               </dl>
             </section>
           )}
+        </div>
+        </div>
+        <div className="movie-info-footer">
           <div className="movie-info-management">
             <button
               className="movie-info-edit"

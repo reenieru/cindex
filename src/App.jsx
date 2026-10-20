@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "./config/firebase";
+import { useAuthBackgroundParallax } from "./animations/animationHooks";
 import Home from "./components/Home";
 import SignIn from "./components/SignIn";
 import SignUp from "./components/SignUp";
@@ -9,7 +10,9 @@ function App() {
   const [pathname, setPathname] = useState(window.location.pathname);
   const [user, setUser] = useState(null);
   const [authReady, setAuthReady] = useState(false);
-  const backgroundIframeRef = useRef(null);
+  const backgroundIframeRef = useAuthBackgroundParallax(
+    authReady && !user,
+  );
 
   useEffect(() => {
     let currentUser = auth.currentUser;
@@ -41,38 +44,6 @@ function App() {
       window.removeEventListener("popstate", handlePopState);
     };
   }, []);
-
-  useEffect(() => {
-    const backgroundIframe = backgroundIframeRef.current;
-    if (!backgroundIframe || !authReady || user) {
-      return undefined;
-    }
-
-    const reducedMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    );
-    let animationFrame = 0;
-
-    const handlePointerMove = (event) => {
-      if (event.pointerType !== "mouse" || reducedMotion.matches) {
-        return;
-      }
-
-      window.cancelAnimationFrame(animationFrame);
-      animationFrame = window.requestAnimationFrame(() => {
-        const offsetX = (event.clientX / window.innerWidth - 0.5) * 12;
-        const offsetY = (event.clientY / window.innerHeight - 0.5) * 12;
-        backgroundIframe.style.setProperty("--cursor-x", `${offsetX}px`);
-        backgroundIframe.style.setProperty("--cursor-y", `${offsetY}px`);
-      });
-    };
-
-    window.addEventListener("pointermove", handlePointerMove);
-    return () => {
-      window.removeEventListener("pointermove", handlePointerMove);
-      window.cancelAnimationFrame(animationFrame);
-    };
-  }, [authReady, user]);
 
   const navigate = (destination) => {
     window.history.pushState({}, "", destination);

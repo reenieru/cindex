@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { signOut } from "firebase/auth";
 import {
   collection,
@@ -12,31 +12,53 @@ import MovieForm from "./MovieForm";
 import MovieCard from "./MovieCard";
 import FeaturedMovieCarousel from "./FeaturedMovieCarousel";
 import MovieInfoModal from "./MovieInfoModal";
+import {
+  useCabinetReveal,
+  useMinimumLoadingTime,
+  useMovieCardAnimationController,
+} from "../animations/animationHooks";
 import "./Homepage.css";
 
 const copyrightYear = new Date().getFullYear();
 const moviesCollectionRef = collection(db, "movies");
 
+function MovieCabinet({ className, id, titleId, title, children }) {
+  const cabinetRef = useRef(null);
+  const isOpen = useCabinetReveal(cabinetRef);
+
+  return (
+    <section
+      ref={cabinetRef}
+      className={`${className} movie-cabinet`}
+      data-open={isOpen}
+      id={id}
+      aria-labelledby={titleId}
+    >
+      <h2 id={titleId}>{title}</h2>
+      {children}
+    </section>
+  );
+}
+
 function Home() {
   const [movies, setMovies] = useState([]);
   const [featuredMovieId, setFeaturedMovieId] = useState(null);
+  const {
+    expandedMovieId,
+    isClosing: isClosingExpandedMovie,
+    open: handleExpandMovie,
+    close: handleCloseExpandedMovie,
+    finishClosing: finishClosingExpandedMovie,
+  } = useMovieCardAnimationController();
   const [movieInfoSelection, setMovieInfoSelection] = useState(null);
   const [movieInfoDirection, setMovieInfoDirection] = useState("next");
   const [showAddMovie, setShowAddMovie] = useState(false);
   const [editingMovie, setEditingMovie] = useState(null);
   const [movieFormKey, setMovieFormKey] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  const [hasMinimumLoadingTime, setHasMinimumLoadingTime] = useState(false);
+  const hasMinimumLoadingTime = useMinimumLoadingTime();
   const [loadError, setLoadError] = useState(null);
   const [logoutError, setLogoutError] = useState("");
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setHasMinimumLoadingTime(true);
-    }, 2000);
-
-    return () => window.clearTimeout(timer);
-  }, []);
 
   // READ: Fetch movie documents from the Firestore collection.
   const getMovieList = useCallback(async () => {
@@ -128,11 +150,19 @@ function Home() {
     setMovieInfoSelection(null);
   }, []);
 
-  const handleEditMovie = (movie) => {
+  function handleEditMovie(movie) {
     setMovieInfoSelection(null);
     setEditingMovie(movie);
     setMovieFormKey((key) => key + 1);
     setShowAddMovie(true);
+  }
+
+  const handleShowMovieInfo = (movie, fromExpandedCard) => {
+    if (fromExpandedCard) {
+      handleCloseExpandedMovie(() => setMovieInfoSelection(movie));
+    } else {
+      setMovieInfoSelection(movie);
+    }
   };
 
   const handleDeleteMovie = async (movie) => {
@@ -280,50 +310,62 @@ function Home() {
             onFeatureMovie={handleFeatureMovie}
           />
 
-          <section
+          <MovieCabinet
             className="movie-catalogue"
             id="movies"
-            aria-labelledby="catalogue-title"
+            titleId="catalogue-title"
+            title="Movies"
           >
-            <h2 id="catalogue-title">Movies</h2>
             {movies.length > 0 ? (
               <div className="movie-list">
-                {movies.map((movie) => (
+                {movies.map((movie, index) => (
                   <MovieCard
                     key={movie.id}
                     movie={movie}
+                    bayNumber={index + 1}
                     isFeatured={movie.id === featuredMovie.id}
+                    isExpanded={movie.id === expandedMovieId}
+                    isClosing={isClosingExpandedMovie}
                     onFeature={handleFeatureMovie}
-                    onShowInfo={setMovieInfoSelection}
+                    onExpand={handleExpandMovie}
+                    onCloseExpanded={handleCloseExpandedMovie}
+                    onCloseAnimationEnd={finishClosingExpandedMovie}
+                    onShowInfo={handleShowMovieInfo}
                   />
                 ))}
               </div>
             ) : (
               <p>No movies found.</p>
             )}
-          </section>
+          </MovieCabinet>
 
-          <section
+          <MovieCabinet
             className="movie-catalogue oscar-catalogue"
-            aria-labelledby="oscar-catalogue-title"
+            titleId="oscar-catalogue-title"
+            title="Award Winning Oscars"
           >
-            <h2 id="oscar-catalogue-title">Award Winning Oscars</h2>
             {awardWinningMovies.length > 0 ? (
               <div className="movie-list">
-                {awardWinningMovies.map((movie) => (
+                {awardWinningMovies.map((movie, index) => (
                   <MovieCard
                     key={movie.id}
                     movie={movie}
+                    bayNumber={index + 1}
                     isFeatured={movie.id === featuredMovie.id}
+                    isExpanded={movie.id === expandedMovieId}
+                    isClosing={isClosingExpandedMovie}
                     onFeature={handleFeatureMovie}
-                    onShowInfo={setMovieInfoSelection}
+                    onExpand={handleExpandMovie}
+                    onCloseExpanded={handleCloseExpandedMovie}
+                    onCloseAnimationEnd={finishClosingExpandedMovie}
+                    onShowInfo={handleShowMovieInfo}
                   />
                 ))}
               </div>
             ) : (
               <p>No Oscar-winning movies found.</p>
             )}
-          </section>
+          </MovieCabinet>
             </>
           )}
         </>
